@@ -19,6 +19,8 @@
         <spring.cloud-version>Hoxton.SR8</spring.cloud-version>
         <org.mapstruct.version>1.4.1.Final</org.mapstruct.version>
         <org.lombok.version>1.18.16</org.lombok.version>
+        <org.wiremock.version>2.27.2</org.wiremock.version>
+        <org.junit-vintage.version>5.7.0</org.junit-vintage.version>
     </properties>
 
     <dependencies>
@@ -41,6 +43,10 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-rest-hal-explorer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
         <dependency>
@@ -84,6 +90,19 @@
         <dependency>
             <groupId>org.springframework.restdocs</groupId>
             <artifactId>spring-restdocs-mockmvc</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8-standalone</artifactId>
+            <version>${org.wiremock.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine -->
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>${org.junit-vintage.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -11,3 +11,5 @@ spring:
     url: "jdbc:postgresql://localhost:5432/suggestion"
     username: postgres
     password: postgres
+  jackson:
+    deserialization.fail-on-unknown-properties: true

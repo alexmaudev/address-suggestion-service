@@ -16,8 +16,6 @@ public interface SuggestionDAO extends CrudRepository<SuggestionEntity, Long> {
 
     SuggestionEntity findByCity(String city);
 
-    List<SuggestionEntity> findByIdIn(List<Long> ids);
-
     @Modifying
     @Transactional
     @Query("DELETE FROM SuggestionEntity s1 " +
@@ -29,19 +27,19 @@ public interface SuggestionDAO extends CrudRepository<SuggestionEntity, Long> {
             @Param("expired") LocalDateTime expired);
 
     @Query("SELECT s1 FROM SuggestionEntity s1 " +
-            "WHERE CASE WHEN s1.region IS NULL AND :region IS NULL THEN TRUE " +
+            "WHERE CASE WHEN :region IS NULL THEN TRUE " +
             "WHEN s1.region IS NOT NULL AND :region!='NULL' THEN " +
             "CASE WHEN ((LOWER(s1.region) LIKE(LOWER(CONCAT('%',:region,'%'))))) THEN TRUE ELSE FAlSE END " +
             "ELSE FALSE END=TRUE " +
-            "AND CASE WHEN s1.city IS NULL AND :city IS NULL THEN TRUE " +
+            "AND CASE WHEN :city IS NULL THEN TRUE " +
             "WHEN s1.city IS NOT NULL AND :city!='NULL' THEN " +
             "CASE WHEN((LOWER(s1.city) LIKE(LOWER(CONCAT('%',:city,'%'))))) THEN TRUE ELSE FAlSE END " +
             "ELSE FALSE END=TRUE " +
-            "AND CASE WHEN s1.settlement IS NULL AND :settlement IS NULL THEN TRUE " +
+            "AND CASE WHEN :settlement IS NULL THEN TRUE " +
             "WHEN s1.settlement IS NOT NULL AND :settlement!='NULL' THEN " +
             "CASE WHEN(LOWER(s1.settlement) LIKE(LOWER(CONCAT('%',:settlement,'%')))) THEN TRUE ELSE FALSE END " +
             "ELSE FALSE END=TRUE " +
-            "AND CASE WHEN s1.street IS NULL AND :street IS NULL THEN TRUE " +
+            "AND CASE WHEN :street IS NULL THEN TRUE " +
             "WHEN s1.street IS NOT NULL AND :street!='NULL' THEN " +
             "CASE WHEN(LOWER(s1.street) LIKE(LOWER(CONCAT('%',:street,'%')))) THEN TRUE ELSE FALSE END " +
             "ELSE FALSE END=TRUE")

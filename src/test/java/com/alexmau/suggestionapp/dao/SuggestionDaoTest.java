@@ -54,18 +54,6 @@ class SuggestionDaoTest {
     }
 
     @Test
-    void shouldFindAllEntitiesIdIn() {
-        List<SuggestionEntity> suggestionFromDb = suggestionDAO.findByIdIn(TestUtil.IDS);
-        List<Suggestion> suggestion = suggestionFromDb.stream().map(s -> suggestionMapper
-                .mapSuggestionEntityToSuggestion(s))
-                .collect(Collectors.toList());
-        assertNotNull(suggestion);
-        assertEquals(suggestion.size(), TestUtil.SUGGESTION_LIST.size());
-        assertThat(TestUtil.SUGGESTION_LIST)
-                .usingRecursiveComparison().ignoringFields("dateTime").isEqualTo(suggestion);
-    }
-
-    @Test
     void shouldFindEntityByParams() {
         List<SuggestionEntity> suggestion = suggestionDAO.findAllSuggestionByRegionAndCityAndSettlemntAndStreet(
                 TestUtil.PARAM_REGION_1, TestUtil.PARAM_CITY_1, TestUtil.PARAM_SETTLEMENT_1, TestUtil.PARAM_STREET_1
@@ -84,5 +72,13 @@ class SuggestionDaoTest {
                 .stream()
                 .map(s -> suggestionMapper.mapDtoToEntity(s))
                 .collect(Collectors.toList())));
+    }
+
+    @Test
+    void shouldNotFindEntityByParams() {
+        List<SuggestionEntity> suggestion = suggestionDAO.findAllSuggestionByRegionAndCityAndSettlemntAndStreet(
+                TestUtil.PARAM_REGION_3, TestUtil.PARAM_CITY_3, TestUtil.PARAM_SETTLEMENT_3, TestUtil.PARAM_STREET_3
+        );
+        assertTrue(suggestion.isEmpty());
     }
 }

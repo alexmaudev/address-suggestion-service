@@ -2,9 +2,11 @@ package com.alexmau.suggestionapp.service;
 
 import com.alexmau.suggestionapp.client.DadataClient;
 import com.alexmau.suggestionapp.dao.SuggestionDAO;
+import com.alexmau.suggestionapp.dto.ListResponse;
+import com.alexmau.suggestionapp.dto.ResponseMessage;
+import com.alexmau.suggestionapp.dto.Suggestion;
 import com.alexmau.suggestionapp.entity.SuggestionEntity;
 import com.alexmau.suggestionapp.mapper.SuggestionMapper;
-import com.alexmau.suggestionapp.dto.Suggestion;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,62 +43,64 @@ public class SuggestionService {
     private SuggestionDAO suggestionDAO;
 
     @Setter
-    private Map<String, List<Long>> threeHoursCacheRequest = new HashMap<>();
+    private Set<Suggestion> threeHoursCacheRequest = new HashSet<>();
 
-    public List<Suggestion> getSuggestionList(String requestBody) throws ExecutionException, InterruptedException {
-        List<Long> listOfIds;
-        if ((listOfIds = threeHoursCacheRequest.get(requestBody)) !=null) {
-            List<SuggestionEntity> suggestionListFromDb = suggestionDAO.findByIdIn(listOfIds);
-            if (suggestionListFromDb.isEmpty()) {
-                List<Suggestion> suggestion = findSuggestionOnResourse(requestBody);
-                saveEntity(requestBody, suggestion);
-                return suggestion;
-            } else {
-                return suggestionListFromDb
-                        .stream().map(s -> suggestionMapper.mapSuggestionEntityToSuggestion(s))
-                        .collect(Collectors.toList());
-            }
+    public ListResponse<Suggestion> findSuggestion(Suggestion suggestion) {
+        final ListResponse<Suggestion> response = new ListResponse<>();
+
+        if (threeHoursCacheRequest.contains(suggestion)) {
+            List<SuggestionEntity> suggestionFromDb = suggestionDAO
+                    .findAllSuggestionByRegionAndCityAndSettlemntAndStreet(
+                    suggestion.getRegion(), suggestion.getCity(), suggestion.getSettlement(), suggestion.getStreet());
+            response.setListResult(suggestionFromDb.stream()
+                    .map(s -> suggestionMapper.mapSuggestionEntityToSuggestion(s))
+                    .collect(Collectors.toList()));
         } else {
-            List<Suggestion> suggestion = findSuggestionOnResourse(requestBody);
-            saveEntity(requestBody, suggestion);
-            return suggestion;
+            List<SuggestionEntity> suggestionFromResource = findSuggestionOnResourseAndSave(suggestion, response);
+            response.setListResult(suggestionFromResource.stream()
+                    .map(s -> suggestionMapper.mapSuggestionEntityToSuggestion(s))
+                    .collect(Collectors.toList()));
         }
+        return response;
     }
 
-    public List<SuggestionEntity> findFromDb(String region, String city, String settlement, String street) {
-        return suggestionDAO
-                .findAllSuggestionByRegionAndCityAndSettlemntAndStreet(region, city, settlement, street);
-
-    }
-
-    private void saveEntity(String requestBody, List<Suggestion> suggestion) {
-        List<SuggestionEntity> entityToSave = new ArrayList<>();
-        for (Suggestion s : suggestion) {
-            SuggestionEntity entity = suggestionMapper.mapDtoToEntity(s);
-            entityToSave.add(entity);
-        }
-        List<SuggestionEntity> saveEntity = new ArrayList<>();
-        suggestionDAO.saveAll(entityToSave).forEach(saveEntity::add);
-        List<Long> ids = saveEntity
-                .stream()
-                .map(SuggestionEntity::getId)
-                .collect(Collectors.toList());
-        threeHoursCacheRequest.put(requestBody, ids);
-    }
-
-    private List<Suggestion> findSuggestionOnResourse(String requestBody) throws ExecutionException, InterruptedException {
-        final HttpResponse response = client.sendRequest(requestBody);
-        String jsonBody = String.valueOf(response.body());
-
-        List<Suggestion> result = new ArrayList<>();
+    private List<SuggestionEntity> findSuggestionOnResourseAndSave(Suggestion suggestion,
+                                                                   ListResponse<Suggestion> response) {
+        HttpResponse resourceResponse  = null;
+        List<SuggestionEntity> result = new ArrayList<>();
         try {
-            JsonNode node = objectMapper.readTree(jsonBody);
+            resourceResponse = client.sendRequest(createQueryFromSuggestion(suggestion));
+            JsonNode node = objectMapper.readTree(String.valueOf(resourceResponse.body()));
             result = objectMapper.readValue(node.findParents("postal_code").toString(),
-                    new TypeReference<List<Suggestion>>(){});
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
+                    new TypeReference<List<SuggestionEntity>>(){});
+            suggestionDAO.saveAll(result);
+            threeHoursCacheRequest.add(suggestion);
+        }
+        catch (JsonProcessingException e) {
+            log.error(e.getMessage());
+            response.addMessage(new ResponseMessage(e.getMessage(), HttpStatus.BAD_REQUEST.value()));
+        }
+        catch (InterruptedException e) {
+            log.error(e.getMessage());
+            response.addMessage(new ResponseMessage(e.getMessage(), HttpStatus.SERVICE_UNAVAILABLE.value()));
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+            log.error(e.getMessage());
+            response.addMessage(new ResponseMessage(e.getMessage(), HttpStatus.SERVICE_UNAVAILABLE.value()));
         }
         return result;
+    }
+
+    private String createQueryFromSuggestion (Suggestion suggestion) {
+        StringBuilder sb = new StringBuilder("{ \"query\": \"");
+        sb.append(suggestion.getPostalCode()==null?"":suggestion.getPostalCode() + " ");
+        sb.append(suggestion.getRegion()==null?"":suggestion.getRegion() + " ");
+        sb.append(suggestion.getCity()==null?"":suggestion.getCity() + " ");
+        sb.append(suggestion.getSettlement()==null?"":suggestion.getSettlement() + " ");
+        sb.append(suggestion.getStreet()==null?"":suggestion.getStreet() + " ");
+        sb.append(suggestion.getHouse()==null?"":suggestion.getHouse() + " ");
+        sb.append("\" }");
+        return new String(sb);
     }
 
     @Scheduled(cron = "@midnight")

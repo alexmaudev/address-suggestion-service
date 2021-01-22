@@ -67,13 +67,18 @@ public class SuggestionService {
     private List<SuggestionEntity> findSuggestionOnResourseAndSave(Suggestion suggestion,
                                                                    ListResponse<Suggestion> response) {
         HttpResponse resourceResponse  = null;
+        List<Suggestion> suggestionListFromResource = new ArrayList<>();
         List<SuggestionEntity> result = new ArrayList<>();
         try {
             resourceResponse = client.sendRequest(createQueryFromSuggestion(suggestion));
             JsonNode node = objectMapper.readTree(String.valueOf(resourceResponse.body()));
-            result = objectMapper.readValue(node.findParents("postal_code").toString(),
-                    new TypeReference<List<SuggestionEntity>>(){});
+            suggestionListFromResource = objectMapper.readValue(node.findParents("postal_code").toString(),
+                    new TypeReference<List<Suggestion>>(){});
+            result = suggestionListFromResource
+                    .stream()
+                    .map(s -> suggestionMapper.mapDtoToEntity(s)).collect(Collectors.toList());
             suggestionDAO.saveAll(result);
+            suggestion.setDateTime(LocalDateTime.now());
             threeHoursCacheRequest.add(suggestion);
         }
         catch (JsonProcessingException e) {
@@ -111,6 +116,7 @@ public class SuggestionService {
 
     @Scheduled(cron = "0 0 0,3,6,9,12,15,18,21 * * *")
     protected void deleteThreeHourCache() {
-        threeHoursCacheRequest.clear();
+        LocalDateTime currentTime = LocalDateTime.now();
+        threeHoursCacheRequest.removeIf(s -> s.getDateTime().plusHours(3).isAfter(currentTime));
     }
 }

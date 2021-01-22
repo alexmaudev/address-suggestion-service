@@ -5,7 +5,6 @@ import com.alexmau.suggestionapp.client.DadataClient;
 import com.alexmau.suggestionapp.dao.SuggestionDAO;
 import com.alexmau.suggestionapp.dto.ListResponse;
 import com.alexmau.suggestionapp.dto.Suggestion;
-import com.alexmau.suggestionapp.entity.SuggestionEntity;
 import com.alexmau.suggestionapp.mapper.SuggestionMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -77,7 +76,7 @@ class SuggestionServiceTest {
 
         Mockito.when(objectMapper.readTree(String.valueOf(response.body()))).thenReturn(node);
         Mockito.when(objectMapper.readValue(node.findParents("postal_code").toString(),
-                new TypeReference<List<SuggestionEntity>>(){})).thenReturn(TestUtil.SUGGESTION_ENTITY_LIST);
+                new TypeReference<List<Suggestion>>(){})).thenReturn(TestUtil.SUGGESTION_LIST);
 
         ListResponse<Suggestion> suggestion = service.findSuggestion(TestUtil.SUGGESTION_REQUEST);
 
